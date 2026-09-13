@@ -1,0 +1,16 @@
+[package]
+name = "pkcs11-abi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "PKCS#11 function-table layouts, catalogs, selection, and readers"
+publish = false
+
+[features]
+default = ["native"]
+native = ["dep:cryptoki-sys"]
+
+[dependencies]
+cryptoki-sys = { workspace = true, optional = true }

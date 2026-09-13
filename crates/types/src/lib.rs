@@ -1,0 +1,62 @@
+//! Owned Rust data models for PKCS#11 identifiers, metadata, calls, and
+//! mechanism parameters.
+//!
+//! These types are useful for storage, transport, tests, and cross-ABI
+//! conversion. They deliberately use stable Rust representations such as
+//! `u64`, `Vec`, and `String`; they are not C-layout bindings and must be
+//! converted before being passed to native PKCS#11 functions. This crate
+//! requires `std` and does not load providers or manage PKCS#11 sessions.
+
+pub mod attribute;
+pub mod error;
+pub mod info;
+pub mod input;
+pub mod interface;
+pub mod mechanism;
+pub mod mechanism_official;
+pub mod mechanism_registry;
+pub mod object;
+pub mod output;
+pub mod session;
+pub mod slot;
+pub mod width;
+
+pub use attribute::{CkAttribute, CkAttributeType, CkAttributeValue};
+pub use error::{CkResult, CkRv};
+pub use info::CkInfo;
+pub use input::CkInBuf;
+pub use interface::{InterfaceCapabilities, InterfaceInfo};
+pub use mechanism::{
+    AesCbcEncryptDataParams, AesCmacKeyDerivationParams, AesCtrParams, AriaCbcEncryptDataParams,
+    CamelliaCbcEncryptDataParams, CamelliaCtrParams, CcmParams, CcmWrapParams, ChaCha20Params,
+    CkMechanism, CkMechanismFlags, CkMechanismInfo, CkMechanismParams, CkMechanismType,
+    CmsSigParams, DesCbcEncryptDataParams, DilithiumParams, Ecdh1DeriveParams, Ecdh2DeriveParams,
+    EcdhAesKeyWrapParams, EciesParams, EcmqvDeriveParams, EddsaParams, ExtractParams, GcmParams,
+    GcmWrapParams, Gostr3410DeriveParams, Gostr3410KeyWrapParams, HdKeyDeriveParams, HkdfParams,
+    Ike1ExtendedDeriveParams, Ike1PrfDeriveParams, Ike2PrfPlusDeriveParams, IkePrfDeriveParams,
+    IvParams, KeaDeriveParams, KeyDerivationStringData, KeyWrapSetOaepParams, KipParams,
+    KmacParams, KyberParams, MacGeneralParams, MuGenParams, ObjectHandleParam, OtpParam, OtpParams,
+    PbeParams, Pkcs5Pbkd2Params, PrfDataParam, RawMechanismParams, Rc2CbcParams,
+    Rc2MacGeneralParams, Rc5CbcParams, Rc5MacGeneralParams, Rc5Params, RsaAesKeyWrapParams,
+    RsaPkcsOaepParams, RsaPkcsPssParams, Salsa20ChaCha20Poly1305Params, Salsa20Params,
+    SeedCbcEncryptDataParams, SignAdditionalContext, SkipjackPrivateWrapParams,
+    SkipjackRelayxParams, Sp800108CounterFormat, Sp800108DerivedKey, Sp800108DkmLengthFormat,
+    Sp800108FeedbackKdfParams, Sp800108KdfParams, Ssl3KeyMatParams, Ssl3MasterKeyDeriveParams,
+    SslRandomData, Tls12ExtendedMasterKeyDeriveParams, Tls12MasterKeyDeriveParams, TlsKdfParams,
+    TlsMacParams, TlsPrfParams, VendorObjectExtractParams, VendorObjectInsertParams,
+    WtlsKeyMatParams, WtlsMasterKeyDeriveParams, WtlsPrfParams, WtlsRandomData,
+    X2RatchetInitializeParams, X2RatchetRespondParams, X3dhInitiateParams, X3dhRespondParams,
+    X942Dh1DeriveParams, X942Dh2DeriveParams, X942MqvDeriveParams, XeddsaParams,
+};
+pub use mechanism_official::{PKCS11_3_2_OFFICIAL_MECHANISMS, pkcs11_3_2_official_mechanisms};
+pub use mechanism_registry::{DiscoveryMode, EMBEDDED_DEFAULT_REVISION, MechanismRegistry};
+pub use object::{CkKeyType, CkObjectClass, CkObjectHandle};
+pub use output::{
+    ByteOutputFunction, CkAttributeQuery, CkAttributeQueryResult, CkOutputAndHandleResult,
+    CkOutputBufferResult, CkOutputBufferSpec, CkParameterRoundtripResult, CkParameterRoundtripSpec,
+    ParameterOutputFunction,
+};
+pub use session::{
+    CkFlags, CkSessionFlags, CkSessionHandle, CkSessionInfo, CkSessionState, CkUserType,
+};
+pub use slot::{CkSlotFlags, CkSlotId, CkSlotInfo, CkTokenFlags, CkTokenInfo};

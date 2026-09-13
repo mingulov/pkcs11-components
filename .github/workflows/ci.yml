@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Rust 1.88
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust 1.88 with rustfmt and Clippy
+        uses: dtolnay/rust-toolchain@1.88
+        with:
+          components: rustfmt, clippy
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Check
+        run: cargo check --locked --workspace --all-targets
+      - name: Test
+        run: |
+          unset PKCS11_MODULE_TEST_3X_MODULE
+          cargo test --locked --workspace --all-targets
+          cargo test --locked --workspace --doc
+      - name: Clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+
+  layout-only:
+    name: Layout-only no_std facades
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@1.88
+      - name: Check and test pkcs11-abi without defaults
+        run: |
+          cargo check --locked -p pkcs11-abi --no-default-features
+          cargo test --locked -p pkcs11-abi --no-default-features
+      - name: Check and test pkcs11-module without defaults
+        run: |
+          cargo check --locked -p pkcs11-module --no-default-features
+          cargo test --locked -p pkcs11-module --no-default-features
+      - name: Verify dependency-free ABI configuration
+        run: |
+          tree=$(cargo tree --locked -p pkcs11-abi --no-default-features --edges normal)
+          test "$(printf '%s\n' "$tree" | wc -l)" -eq 1

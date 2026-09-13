@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = ["crates/abi", "crates/module", "crates/types"]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.88"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/mingulov/pkcs11-components"
+
+[workspace.dependencies]
+pkcs11-abi = { path = "crates/abi", version = "0.2.0", default-features = false }
+cryptoki-sys = "0.5"
+libloading = "0.8"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+tracing = "0.1"
+zeroize = { version = "1", features = ["derive"] }

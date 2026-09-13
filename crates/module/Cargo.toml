@@ -1,0 +1,22 @@
+[package]
+name = "pkcs11-module"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Raw pre-initialization PKCS#11 module interface acquisition"
+publish = false
+
+[features]
+default = ["native"]
+native = ["pkcs11-abi/native", "dep:cryptoki-sys", "dep:libloading"]
+
+[dependencies]
+pkcs11-abi = { workspace = true }
+cryptoki-sys = { workspace = true, optional = true }
+libloading = { workspace = true, optional = true }
+
+[[example]]
+name = "inspect"
+required-features = ["native"]
