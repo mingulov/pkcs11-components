@@ -13,9 +13,9 @@ impl<'a> CkInBuf<'a> {
     /// slice is no longer valid. The pointer carries no Rust lifetime, so the
     /// caller must ensure it is not retained beyond that point.
     ///
-    /// - For `Bytes`: the pointer is **non-null** even for an empty slice (it is a
-    ///   valid dangling pointer into the slice's allocation and **must not be
-    ///   dereferenced** when `len` is 0).
+    /// - For `Bytes`: the pointer is **non-null** even for an empty slice.
+    ///   An empty slice's pointer may be dangling and **must not be
+    ///   dereferenced** when `len` is 0.
     /// - For `Null`: the pointer is `ptr::null()` regardless of the claimed `len`.
     ///
     /// Pass the pair to an API that accepts these exact semantics; never

@@ -7,6 +7,20 @@ pub struct CkMechanismType(pub u64);
 impl CkMechanismType {
     pub const VENDOR_DEFINED: Self = Self(0x8000_0000);
 
+    /// Proposed ML-DSA external-mu generation (`0x403b`), requiring [`MuGenParams`].
+    ///
+    /// Proposed for PKCS#11 3.3.
+    /// Caller/provider validation is still required.
+    pub const ML_DSA_EXTERNAL_MU_GEN: Self = Self(0x0000_403b);
+
+    /// Proposed signing/verification of external ML-DSA mu (`0x403c`).
+    ///
+    /// The proposal permits optional [`SignAdditionalContext`]: its hedge
+    /// variant is used, context is ignored, and `hash` is zero (the plain
+    /// additional-context representation). Like [`Self::ML_DSA_EXTERNAL_MU_GEN`],
+    /// this is a proposed PKCS#11 3.3 addition.
+    pub const ML_DSA_EXTERNAL_MU: Self = Self(0x0000_403c);
+
     // Common parameterless mechanisms
     pub const RSA_PKCS: Self = Self(0x00000001);
     pub const RSA_PKCS_KEY_PAIR_GEN: Self = Self(0x00000000);
@@ -60,7 +74,7 @@ impl CkMechanismType {
     pub const X9_42_DH_HYBRID_DERIVE: Self = Self(0x00000032);
     pub const X9_42_MQV_DERIVE: Self = Self(0x00000033);
 
-    // Planned extensions (P1)
+    // Additional symmetric, derivation, and historical mechanisms
     pub const AES_XTS: Self = Self(0x00001071);
     pub const AES_XTS_KEY_GEN: Self = Self(0x00001072);
     pub const AES_KEY_GEN: Self = Self(0x00001080);
@@ -677,7 +691,7 @@ pub struct Pkcs5Pbkd2Params {
 
 impl std::fmt::Debug for Pkcs5Pbkd2Params {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Destructure to gate against silently-omitted future fields.
+        // Destructuring makes newly added fields a compile error here.
         let Self { salt_source, salt_source_data, iterations, prf, prf_data, password } = self;
         f.debug_struct("Pkcs5Pbkd2Params")
             .field("salt_source", salt_source)
@@ -999,7 +1013,7 @@ pub struct SkipjackPrivateWrapParams {
 
 impl std::fmt::Debug for SkipjackPrivateWrapParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Destructure to gate against silently-omitted future fields.
+        // Destructuring makes newly added fields a compile error here.
         let Self { password, public_data, password_length, random_a, prime_p, base_g, subprime_q } =
             self;
         f.debug_struct("SkipjackPrivateWrapParams")
@@ -1031,7 +1045,7 @@ pub struct SkipjackRelayxParams {
 
 impl std::fmt::Debug for SkipjackRelayxParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Destructure to gate against silently-omitted future fields.
+        // Destructuring makes newly added fields a compile error here.
         let Self {
             old_wrapped_x,
             old_password,
@@ -1103,7 +1117,11 @@ pub struct KmacParams {
     pub customization_string: Vec<u8>,
 }
 
-/// CK_MU_GEN_PARAMS — ML-DSA external-mu generation inputs.
+/// Owned inputs for the proposed `CK_MU_GEN_PARAMS` external-mu mechanism.
+///
+/// See [`CkMechanismType::ML_DSA_EXTERNAL_MU_GEN`] for the proposed mechanism.
+/// These are owned, width-independent values, not a native C layout. The
+/// caller/provider must validate required parameters and key/TR/context rules.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MuGenParams {
     pub key_handle: u64,
@@ -1113,7 +1131,9 @@ pub struct MuGenParams {
 
 /// Opaque raw parameter bytes — opt-in escape hatch for vendor-specific
 /// mechanisms with scalar-only (non-pointer) parameter structures.
-/// The config registry controls which mechanisms can use this variant.
+/// Callers must establish that the bytes contain no pointers and match the
+/// provider's parameter layout. Registry shape names can guide that policy;
+/// neither this type nor the registry validates the contents or variant.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RawMechanismParams {
     pub data: Vec<u8>,
@@ -1677,9 +1697,7 @@ mod tests {
         assert!(b.new_password.iter().all(|&n| n == 0));
     }
 
-    // Witness whose Zeroize impl records that it ran, so ZeroizeOnDrop's
-    // generated Drop can be observed WITHOUT reading freed memory (the old
-    // pbe_params_drop_runs_zeroize_on_drop test was a use-after-free).
+    // Record calls to Zeroize so Drop can be checked without reading freed memory.
     use zeroize::{Zeroize, ZeroizeOnDrop};
     struct ZeroizeWitness(std::sync::Arc<std::sync::atomic::AtomicBool>);
     impl Zeroize for ZeroizeWitness {
@@ -1706,9 +1724,9 @@ mod tests {
 
     #[test]
     fn zeroize_on_drop_runs_during_panic_unwind() {
-        // AGENTS.md §4: secret structs rely on ZeroizeOnDrop running during
-        // stack UNWINDING — which is why the release profile must stay
-        // panic="unwind". This would fail under panic="abort".
+        // Secret values rely on ZeroizeOnDrop during panic unwinding.
+        // With panic="abort", destructors do not run; this test covers
+        // the unwinding behavior.
         use std::sync::Arc;
         use std::sync::atomic::{AtomicBool, Ordering};
         let flag = Arc::new(AtomicBool::new(false));

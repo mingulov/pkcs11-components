@@ -43,7 +43,7 @@ macro_rules! ck_rv_table {
     };
 }
 
-// Standard CKR_* values published in OASIS PKCS#11 3.02 `pkcs11t.h`.
+// Standard CKR_* values from PKCS#11 3.2.
 // These match the currently used `cryptoki-sys 0.5.x` bindings and keep the
 // higher-level `pkcs11-types` layer independent from that crate.
 ck_rv_table! {

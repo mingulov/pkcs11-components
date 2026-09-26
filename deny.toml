@@ -1,0 +1,24 @@
+# Dependency advisory, license and source checks.
+[advisories]
+ignore = []
+
+[licenses]
+# Licenses accepted in this workspace's dependency graph by cargo-deny.
+# This CI policy does not restrict the licenses of applications using these crates.
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "ISC",
+    "Unicode-3.0",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

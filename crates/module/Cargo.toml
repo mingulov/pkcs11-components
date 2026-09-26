@@ -6,7 +6,14 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Raw pre-initialization PKCS#11 module interface acquisition"
-publish = false
+readme = "README.md"
+documentation = "https://docs.rs/pkcs11-module"
+keywords = ["pkcs11", "cryptoki", "hsm", "module"]
+categories = ["cryptography", "hardware-support"]
+include = ["src/**", "tests/**", "examples/**", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 
 [features]
 default = ["native"]

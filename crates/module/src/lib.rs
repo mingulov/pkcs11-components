@@ -5,9 +5,9 @@
 //! execute foreign code, and pointers returned by acquisition remain usable
 //! only while the provider library and its data remain valid.
 //!
-//! Without default features this is a dependency-free `no_std` facade over the
-//! target-layout APIs from [`pkcs11_abi`]; native tables and acquisition are not
-//! available.
+//! Without default features, this is a `no_std` wrapper around [`pkcs11_abi`]
+//! with no other dependencies. That build provides target-layout APIs;
+//! native tables, parameter declarations and acquisition require `native`.
 
 #![cfg_attr(not(feature = "native"), no_std)]
 
@@ -16,12 +16,16 @@ pub mod acquire;
 
 pub use pkcs11_abi::layout;
 #[cfg(feature = "native")]
+pub use pkcs11_abi::params;
+#[cfg(feature = "native")]
 pub use pkcs11_abi::tables;
 
 #[cfg(feature = "native")]
 pub use acquire::{RawInterface, function_list, interface_list};
 #[cfg(feature = "native")]
 pub use pkcs11_abi::{
+    CK_MU_GEN_PARAMS, CK_MU_GEN_PARAMS_PTR, CK_X9_42_MQV_DERIVE_PARAMS,
+    CK_X9_42_MQV_DERIVE_PARAMS_PTR, CKM_ML_DSA_EXTERNAL_MU, CKM_ML_DSA_EXTERNAL_MU_GEN,
     FUNCTION_LIST_3_0_EXTRA_FIELDS, FUNCTION_LIST_3_2_EXTRA_FIELDS, FUNCTION_LIST_FIELDS, FnField,
     Surface, TableSet, TableSpan, detect_null_functions, read_fn_pointers, tables_for,
 };

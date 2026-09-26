@@ -68,8 +68,8 @@ pub fn interface_list(lib: &libloading::Library) -> Result<Option<Vec<RawInterfa
     }
 }
 
-/// Resolver-level seam: `None` models an absent export so `Ok(None)` is
-/// reachable in deterministic tests; the driver below is pure Rust.
+/// Enumerate interfaces through a callback. Tests use `None` to represent a
+/// missing export and Rust callbacks to exercise the enumeration logic.
 fn interface_list_impl<F>(mut get_list: Option<F>) -> Result<Option<Vec<RawInterface>>, String>
 where
     F: FnMut(*mut CK_INTERFACE, *mut CK_ULONG) -> CK_RV,
@@ -315,10 +315,10 @@ mod tests {
             eprintln!("skipping: PKCS11_MODULE_TEST_3X_MODULE not set");
             return;
         };
-        if !std::path::Path::new(&path).exists() {
-            eprintln!("skipping: {path} not found");
-            return;
-        }
+        assert!(
+            std::path::Path::new(&path).is_file(),
+            "explicit PKCS11_MODULE_TEST_3X_MODULE is not a file: {path}"
+        );
         let lib = unsafe { libloading::Library::new(&path) }.expect("dlopen");
         let listed = interface_list(&lib).expect("enumeration should succeed");
         let listed = listed.expect("a 3.x module exports C_GetInterfaceList");

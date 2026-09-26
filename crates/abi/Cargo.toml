@@ -6,7 +6,14 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "PKCS#11 function-table layouts, catalogs, selection, and readers"
-publish = false
+readme = "README.md"
+documentation = "https://docs.rs/pkcs11-abi"
+keywords = ["pkcs11", "cryptoki", "abi", "hsm", "no-std"]
+categories = ["cryptography", "hardware-support", "no-std"]
+include = ["src/**", "tests/**", "examples/**", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 
 [features]
 default = ["native"]
@@ -14,3 +21,6 @@ native = ["dep:cryptoki-sys"]
 
 [dependencies]
 cryptoki-sys = { workspace = true, optional = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }

@@ -172,6 +172,9 @@ impl MechanismRegistry {
 
     /// Load from embedded default, optionally merging an override TOML
     /// string. Useful for testing without touching the filesystem.
+    ///
+    /// `include` entries are ignored because a string has no base directory.
+    /// Use [`load`](Self::load) to resolve includes from an override file.
     pub fn load_with_override_str(override_toml: Option<&str>) -> Result<Self, String> {
         let (mut param_shapes, mut parameterless, mut discovery_mode) = Self::load_base()?;
 
@@ -242,6 +245,11 @@ impl MechanismRegistry {
     /// - Invocations with params must have a known parameter shape.
     /// - Unknown mechanisms with params are rejected with
     ///   `CKR_MECHANISM_PARAM_INVALID`.
+    ///
+    /// This does not validate mechanism semantics: for example, a caller may
+    /// omit required external-mu generation parameters and still pass this
+    /// representability check. Callers/providers validate required parameters,
+    /// variant contents, and key/TR/context combinations.
     pub fn check_operation(&self, mech_type: u64, has_params: bool) -> Result<(), CkRv> {
         if !has_params {
             return Ok(());
@@ -299,7 +307,7 @@ impl MechanismRegistry {
 mod tests {
     use super::*;
 
-    // Well-known mechanism constants (from OASIS PKCS#11 v3.02).
+    // Well-known PKCS#11 mechanism constants.
     const CKM_AES_GCM: u64 = 0x1087;
     const CKM_RSA_PKCS: u64 = 0x0001;
     const CKM_RSA_PKCS_PSS: u64 = 0x000D;
@@ -429,12 +437,11 @@ mod tests {
 
     #[test]
     fn ml_dsa_and_slh_dsa_hash_variants_use_sign_additional_context() {
-        // Regression guard: pure CKM_ML_DSA already mapped, but the hash-specific
-        // ML-DSA / SLH-DSA mechanisms take the SAME plain CK_SIGN_ADDITIONAL_CONTEXT
-        // (the hash is implied by the mechanism — OASIS PKCS#11 v3.2 ml_dsa.md
-        // §"CKM_HASH_ML_DSA_*”). Without these mappings, converting their
-        // context parameter through the raw representation would preserve a
-        // process-local pointer instead of the pointed-to bytes.
+        // Pure and hash-specific ML-DSA / SLH-DSA mechanisms use the plain
+        // CK_SIGN_ADDITIONAL_CONTEXT; the hash is implied by the mechanism.
+        // Without these mappings, converting their context parameter through
+        // the raw representation would preserve a process-local pointer instead
+        // of the pointed-to bytes.
         let reg = MechanismRegistry::load_with_override_str(None).unwrap();
         for mech in [
             0x001D, // CKM_ML_DSA (pure)
@@ -706,10 +713,10 @@ mod tests {
     }
 
     #[test]
-    fn all_standard_parameterless_mechanisms_present_in_default_config() {
-        // Verify that the embedded default TOML contains all 133 standard
-        // parameterless mechanisms. This list is exhaustive against the
-        // mechanism_params_default.toml file to catch accidental deletions.
+    fn established_parameterless_mechanisms_remain_in_default_config() {
+        // Retain the established subset of parameterless registrations.
+        // This is a regression inventory, not an exhaustive specification list;
+        // independent parameter-shape regressions live in standard_contract.rs.
         let reg = MechanismRegistry::load_with_override_str(None).unwrap();
 
         // Every family of parameterless mechanisms from the default TOML.
@@ -748,9 +755,6 @@ mod tests {
             0x001A, // CKM_DSA_SHA3_384
             0x001B, // CKM_DSA_SHA3_512
             0x2000, // CKM_DSA_PARAMETER_GEN
-            0x2003, // CKM_DSA_PROBABILISTIC_PARAMETER_GEN
-            0x2004, // CKM_DSA_SHAWE_TAYLOR_PARAMETER_GEN
-            0x2005, // CKM_DSA_FIPS_G_GEN
             // DH
             0x0020, // CKM_DH_PKCS_KEY_PAIR_GEN
             0x2001, // CKM_DH_PKCS_PARAMETER_GEN
@@ -783,8 +787,6 @@ mod tests {
             0x0111, // CKM_RC4
             // RC5
             0x0330, // CKM_RC5_KEY_GEN
-            0x0331, // CKM_RC5_ECB
-            0x0333, // CKM_RC5_MAC
             // DES
             0x0120, // CKM_DES_KEY_GEN
             0x0121, // CKM_DES_ECB
@@ -820,11 +822,6 @@ mod tests {
             0x1081, // CKM_AES_ECB
             0x1083, // CKM_AES_MAC
             0x108A, // CKM_AES_CMAC
-            // SSL/TLS
-            0x0370, // CKM_SSL3_PRE_MASTER_KEY_GEN
-            0x0374, // CKM_TLS_PRE_MASTER_KEY_GEN
-            0x0380, // CKM_SSL3_MD5_MAC
-            0x0381, // CKM_SSL3_SHA1_MAC
             // Digests
             0x0200, // CKM_MD2
             0x0201, // CKM_MD2_HMAC
@@ -876,14 +873,6 @@ mod tests {
             0x001C, // CKM_ML_DSA_KEY_PAIR_GEN
             0x001D, // CKM_ML_DSA
         ];
-
-        // Verify count matches the TOML (133 parameterless mechanisms).
-        // Parameterized RC2 ECB/MAC mechanisms use registry shapes.
-        assert_eq!(
-            expected_parameterless.len(),
-            133,
-            "expected list should contain exactly 133 entries"
-        );
 
         for &mech in expected_parameterless {
             assert!(

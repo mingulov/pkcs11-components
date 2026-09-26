@@ -34,8 +34,8 @@ impl CkAttributeType {
     pub const EC_POINT: Self = Self(0x00000181);
     pub const ID: Self = Self(0x00000102);
     /// `CKA_UNIQUE_ID` — PKCS#11 v3.0 mandatory, immutable byte-string
-    /// globally unique identifier for storage objects (CK_BYTE_PTR, value 0x0000_002E).
-    pub const UNIQUE_ID: Self = Self(0x0000_002E);
+    /// globally unique identifier for storage objects (value 0x0000_0004).
+    pub const UNIQUE_ID: Self = Self(0x0000_0004);
     pub const VALUE_LEN: Self = Self(0x00000161);
     pub const LOCAL: Self = Self(0x00000163);
 
@@ -48,9 +48,8 @@ impl CkAttributeType {
     pub const ALLOWED_MECHANISMS: Self = Self(Self::ARRAY_ATTRIBUTE_FLAG | 0x00000600);
 
     // Additional scalar `CK_ULONG` / `CK_ULONG`-typedef attributes for the
-    // width conversion. Values verified against `cryptoki-sys` 0.5
-    // and the OASIS attribute-type tables (common/key/certificate/hardware/
-    // validation/trust/profile/mechanism/otp/hss/double-ratchet object specs).
+    // width conversion. Values are checked against `cryptoki-sys` 0.5 and
+    // PKCS#11 attribute types, including legacy attributes.
     pub const CERTIFICATE_CATEGORY: Self = Self(0x00000087); // CK_CERTIFICATE_CATEGORY
     pub const JAVA_MIDP_SECURITY_DOMAIN: Self = Self(0x00000088); // CK_JAVA_MIDP_SECURITY_DOMAIN
     pub const NAME_HASH_ALGORITHM: Self = Self(0x0000008C); // CK_MECHANISM_TYPE
@@ -111,8 +110,10 @@ impl CkAttributeType {
         (self.0 & Self::VENDOR_DEFINED.0) == Self::VENDOR_DEFINED.0
     }
 
-    /// Returns true if this attribute type has the `CKF_ARRAY_ATTRIBUTE` flag set,
-    /// meaning its value is a nested `CK_ATTRIBUTE[]` template.
+    /// Returns true if this attribute type has the `CKF_ARRAY_ATTRIBUTE` flag set.
+    /// The flag does not identify the element type: use
+    /// [`is_attribute_template`](Self::is_attribute_template) to distinguish
+    /// nested `CK_ATTRIBUTE[]` templates from other arrays.
     pub const fn is_array_attribute(self) -> bool {
         (self.0 & Self::ARRAY_ATTRIBUTE_FLAG) == Self::ARRAY_ATTRIBUTE_FLAG
     }
@@ -144,6 +145,7 @@ impl CkAttributeType {
                 | Self::SIGN
                 | Self::VERIFY
                 | Self::EXTRACTABLE
+                | Self::LOCAL
         )
     }
 
@@ -151,11 +153,10 @@ impl CkAttributeType {
     /// value (or a `CK_ULONG`-based typedef: `CK_OBJECT_CLASS`, `CK_KEY_TYPE`,
     /// `CK_MECHANISM_TYPE`, `CK_FLAGS`, `CK_TRUST`, etc.).
     ///
-    /// A scalar ulong is the
-    /// only attribute shape whose value must be re-encoded between a 32-bit and
-    /// a 64-bit `CK_ULONG` edge. The set is sourced from the OASIS attribute-type
-    /// tables and pinned by a cross-checked consistency test; a missing entry is
-    /// invisible at same width but corrupts the value across an ABI boundary.
+    /// These values must be re-encoded when crossing between 32-bit and 64-bit
+    /// `CK_ULONG` widths. Consistency tests check the set against PKCS#11
+    /// attribute types. A missing entry can go unnoticed at the same width
+    /// but corrupt the value across an ABI boundary.
     /// Array-of-ulong attributes are classified by [`is_ulong_array`](Self::is_ulong_array).
     pub fn is_ulong(self) -> bool {
         matches!(
@@ -282,8 +283,8 @@ mod tests {
 
     #[test]
     fn unique_id_attribute_has_correct_value() {
-        // CKA_UNIQUE_ID = 0x0000_002E per PKCS#11 v3.0 spec.
-        assert_eq!(CkAttributeType::UNIQUE_ID.0, 0x0000_002E);
+        // Published PKCS#11 3.2 value for CKA_UNIQUE_ID.
+        assert_eq!(CkAttributeType::UNIQUE_ID.0, 0x0000_0004);
     }
 
     #[test]
@@ -297,7 +298,7 @@ mod tests {
     #[test]
     fn is_ulong_covers_full_oasis_scalar_set() {
         // Representatives across every object category that carries a scalar
-        // CK_ULONG / CK_ULONG-typedef value (OASIS 3.x + legacy). A missing
+        // CK_ULONG / CK_ULONG-typedef value (PKCS#11 3.x + legacy). A missing
         // entry silently corrupts that attribute's value across a 32/64-bit ABI.
         for t in [
             CkAttributeType::CLASS,
