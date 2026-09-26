@@ -6,7 +6,14 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Shared Rust PKCS#11 data types and mechanism metadata"
-publish = false
+readme = "README.md"
+documentation = "https://docs.rs/pkcs11-types"
+keywords = ["pkcs11", "cryptoki", "hsm", "mechanism", "attributes"]
+categories = ["cryptography", "data-structures"]
+include = ["src/**", "tests/**", "examples/**", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 
 [dependencies]
 serde = { workspace = true }
@@ -15,7 +22,11 @@ tracing = { workspace = true }
 zeroize = { workspace = true }
 
 [dev-dependencies]
+cryptoki-sys = { workspace = true }
 tempfile = "3"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
 
 [lints.clippy]
 uninlined_format_args = "allow"

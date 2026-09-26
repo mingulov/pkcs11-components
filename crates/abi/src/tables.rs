@@ -122,9 +122,9 @@ impl TableSpan {
 #[derive(Debug, Clone, Copy)]
 pub enum TableSet {
     Walk(&'static [TableSpan]),
-    /// 3.x with minor > 2: the listed tables are a safe *prefix*; fields
-    /// beyond the known 3.2 layout exist but must be recorded as excess,
-    /// not walked.
+    /// Only the listed prefix is supported by the asserted surface/version.
+    /// This includes legacy 3.x, unknown 2.x minors, and standard interfaces
+    /// newer than 3.2. Do not infer or walk fields beyond this prefix.
     WalkKnownPrefix(&'static [TableSpan]),
     /// Unknown major/layout: record, walk nothing.
     Refuse,
@@ -324,7 +324,7 @@ mod tests {
         let set = tables_for(std_iface(2, 40));
         assert!(matches!(set, TableSet::Walk(_)));
         assert_eq!(walked(set), vec![FUNCTION_LIST_FIELDS.as_ptr()]);
-        // OASIS defines the structure only as 0x02/0x28 "2.40 compatible";
+        // This structure is defined for version 0x02/0x28 (2.40);
         // an older 2.x table is not guaranteed to contain the full 2.40 tail.
         assert!(matches!(tables_for(std_iface(2, 30)), TableSet::Refuse));
         assert!(matches!(tables_for(std_iface(2, 20)), TableSet::Refuse));

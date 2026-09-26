@@ -2,50 +2,234 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["**"]
   pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   test:
-    name: Rust 1.88
-    runs-on: ubuntu-24.04
+    name: Rust ${{ matrix.rust }} / ${{ matrix.target }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rust: 1.88.0
+            target: x86_64-unknown-linux-gnu
+          - rust: 1.88.0
+            target: i686-unknown-linux-gnu
+          - rust: 1.98.0
+            target: x86_64-unknown-linux-gnu
     steps:
-      - uses: actions/checkout@v6
-      - name: Install Rust 1.88 with rustfmt and Clippy
-        uses: dtolnay/rust-toolchain@1.88
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          persist-credentials: false
+      - name: Install ILP32 linker and runtime
+        if: matrix.target == 'i686-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes gcc-multilib libc6-dev-i386
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: ${{ matrix.rust }}
+          targets: ${{ matrix.target }}
           components: rustfmt, clippy
-      - name: Format
-        run: cargo fmt --all -- --check
-      - name: Check
-        run: cargo check --locked --workspace --all-targets
-      - name: Test
+      - name: Format and Clippy
+        if: matrix.rust == '1.88.0' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Check, unit/integration/example tests, and doctests
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
         run: |
           unset PKCS11_MODULE_TEST_3X_MODULE
+          cargo check --locked --workspace --all-targets
           cargo test --locked --workspace --all-targets
           cargo test --locked --workspace --doc
-      - name: Clippy
-        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Optimized tests
+        if: matrix.rust == '1.88.0' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: env -u PKCS11_MODULE_TEST_3X_MODULE cargo test --locked --release --workspace --all-targets
 
   layout-only:
     name: Layout-only no_std facades
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
-      - name: Install Rust 1.88
-        uses: dtolnay/rust-toolchain@1.88
-      - name: Check and test pkcs11-abi without defaults
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.88.0
+      - name: Check and test each facade separately
         run: |
           cargo check --locked -p pkcs11-abi --no-default-features
           cargo test --locked -p pkcs11-abi --no-default-features
-      - name: Check and test pkcs11-module without defaults
-        run: |
           cargo check --locked -p pkcs11-module --no-default-features
           cargo test --locked -p pkcs11-module --no-default-features
-      - name: Verify dependency-free ABI configuration
+      - name: Verify both dependency boundaries
         run: |
-          tree=$(cargo tree --locked -p pkcs11-abi --no-default-features --edges normal)
-          test "$(printf '%s\n' "$tree" | wc -l)" -eq 1
+          python3 - <<'PY'
+          import subprocess
+          for name, expected in [
+              ('pkcs11-abi', ['pkcs11-abi']),
+              ('pkcs11-module', ['pkcs11-module', 'pkcs11-abi']),
+          ]:
+              tree = subprocess.check_output([
+                  'cargo', 'tree', '--locked', '-p', name,
+                  '--no-default-features', '--edges', 'normal,build',
+                  '--prefix', 'none', '--format', '{p}',
+              ], text=True)
+              actual = [line.split()[0] for line in tree.splitlines()]
+              assert actual == expected, (name, actual)
+              print(name, actual)
+          PY
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.88.0
+      - run: cargo doc --locked --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  deny:
+    name: Dependency advisories, licenses and sources
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.88.0
+      - run: cargo install --locked cargo-deny --version 0.20.2
+      - run: cargo deny check
+
+  miri:
+    name: Miri (nightly-2026-09-17)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: nightly-2026-09-17
+          components: miri, rust-src
+      - name: Check table readers, native layouts and width conversions with Miri
+        run: |
+          unset PKCS11_MODULE_TEST_3X_MODULE
+          cargo miri test --locked -p pkcs11-abi -p pkcs11-module --lib --tests
+          cargo miri test --locked -p pkcs11-types --lib width::
+          cargo miri test --locked -p pkcs11-types --test unavailable_information
+
+  kani:
+    name: Kani proofs (0.68.0)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.88.0
+      - name: Cache verifier bundle (not Cargo-installed executables)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.kani
+          key: ${{ runner.os }}-${{ runner.arch }}-kani-0.68.0
+      - run: |
+          cargo install --locked kani-verifier --version 0.68.0
+          cargo kani setup
+      - name: Prove selected layout and width properties
+        run: |
+          cargo kani -Z unstable-options --harness-timeout 10m -p pkcs11-abi
+          cargo kani -Z unstable-options --harness-timeout 10m -p pkcs11-types
+
+  package:
+    name: Complete archives and Rust 1.88 consumers
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.88.0
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.98.0
+      - name: Verify every package, including unpublished workspace dependencies
+        run: cargo +1.98.0 publish --workspace --locked --dry-run --registry crates-io
+      - name: Inspect contents and test unpacked consumers
+        run: |
+          cargo +1.98.0 package --workspace --locked
+          python3 scripts/release_checks.py archives --package-dir target/package
+          python3 scripts/release_checks.py consumer --package-dir target/package --toolchain 1.88.0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: crate-archives-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            target/package/*.crate
+            target/package/package-inventory.json
+            target/package/SHA256SUMS
+
+  workflow-checks:
+    name: Release tooling and workflow syntax
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s scripts/tests -v
+      - name: Check Actions workflows
+        run: |
+          curl --fail --silent --show-error --location \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            --output "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+
+  required:
+    name: All release gates
+    if: always()
+    needs: [test, layout-only, docs, deny, miri, kani, package, workflow-checks]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          results = json.loads(os.environ['RESULTS'])
+          failed = {name: result['result'] for name, result in results.items()
+                    if result['result'] != 'success'}
+          assert not failed, failed
+          print('Every required gate succeeded')
+          PY

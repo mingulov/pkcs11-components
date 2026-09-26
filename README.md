@@ -1,12 +1,10 @@
 # pkcs11-components
 
-Low-level Rust building blocks for software that needs to inspect PKCS#11 ABI
-layouts, load a PKCS#11 provider, or exchange PKCS#11-shaped data without using
-native C structures directly.
+Rust libraries for inspecting PKCS#11 function tables, acquiring provider
+interfaces, and storing or exchanging PKCS#11 data.
 
-This workspace is intentionally not a complete PKCS#11 client. It does not
-manage tokens, sessions, login state, or object operations.
-It is an independent project and is not affiliated with OASIS.
+Applications remain responsible for tokens, sessions, login and object
+operations.
 
 ## Crates
 
@@ -14,12 +12,11 @@ It is an independent project and is not affiliated with OASIS.
 | --- | --- |
 | [`pkcs11-abi`](crates/abi) | Function-table field catalogs, Linux LP64/ILP32 offsets, version-aware prefix selection, or bounds-checked table readers |
 | [`pkcs11-module`](crates/module) | Raw `C_GetFunctionList` and `C_GetInterfaceList` acquisition from a shared library, before initialization |
-| [`pkcs11-types`](crates/types) | Owned Rust identifiers, metadata, mechanism parameters, registry configuration, and exact caller input/output shapes |
+| [`pkcs11-types`](crates/types) | Owned identifiers, mechanism parameters, registry settings, and operation inputs and outputs |
 
-`pkcs11-abi` models C layouts. `pkcs11-types` does not: its owned, mostly
-`u64`-based values are suitable for storage, transport, testing, and
-cross-width conversion, but must be converted before calling a native PKCS#11
-function.
+`pkcs11-abi` models C layouts. `pkcs11-types` uses owned Rust values, mostly
+based on `u64`, for storage, transport and conversion between native widths.
+Convert these values to native C types before passing them to a provider.
 
 ## Requirements
 
@@ -27,15 +24,23 @@ function.
 - A little-endian Linux target for the explicitly modeled LP64 and ILP32 layouts
 - A provider shared library only when using `pkcs11-module` acquisition
 
-The packages are currently Git-only (`publish = false`). Pin a commit in
-applications that need reproducible builds:
+The first crates.io release is being prepared. After publication, add:
+
+```toml
+[dependencies]
+pkcs11-abi = "0.2"
+pkcs11-module = "0.2"
+pkcs11-types = "0.2"
+libloading = "0.8" # needed when your code opens provider libraries
+```
+
+Until publication, or to select an exact source revision, pin a Git commit:
 
 ```toml
 [dependencies]
 pkcs11-abi = { git = "https://github.com/mingulov/pkcs11-components", rev = "<commit>" }
 pkcs11-module = { git = "https://github.com/mingulov/pkcs11-components", rev = "<commit>" }
 pkcs11-types = { git = "https://github.com/mingulov/pkcs11-components", rev = "<commit>" }
-libloading = "0.8" # needed when your code opens provider libraries
 ```
 
 For a local checkout, replace `git` and `rev` with a `path` such as
@@ -76,8 +81,8 @@ let registry = MechanismRegistry::load(None).expect("embedded registry should pa
 assert_eq!(registry.param_shape(CkMechanismType::AES_GCM.0), Some("gcm"));
 ```
 
-The shape name describes how this crate models parameters; it does not claim
-that a particular provider supports the mechanism.
+The shape name describes how this crate represents parameters. Check the
+provider separately for mechanism support.
 
 Runnable versions are available in
 [`crates/abi/examples/layout.rs`](crates/abi/examples/layout.rs),
@@ -97,8 +102,8 @@ native-layout tables; disabling default features leaves a dependency-free
 `no_std` crate containing target-layout facts and slice readers.
 
 `pkcs11-module` also enables `native` by default. Without it, the crate is a
-dependency-free `no_std` facade over `pkcs11-abi` layout APIs; acquisition APIs
-are not available.
+`no_std` wrapper around `pkcs11-abi` with no other dependencies. Provider
+acquisition requires `native`.
 
 `pkcs11-types` requires `std` and has no optional features. Cargo feature
 unification may enable `pkcs11-abi/native` when another dependency requests it.
@@ -124,6 +129,9 @@ the API documentation locally with:
 ```bash
 cargo doc --locked --workspace --no-deps --open
 ```
+
+See [RELEASE.md](RELEASE.md) for package checks, staging tests, trusted
+publishing and the release steps.
 
 ## Versioning
 

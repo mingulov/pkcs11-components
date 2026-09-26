@@ -1,4 +1,4 @@
-// Mechanism identifiers from the OASIS PKCS#11 v3.2 headers.
+// Published PKCS#11 3.2 mechanism identifiers.
 // Keep sorted by numeric value; duplicate official aliases are noted in comments.
 
 use crate::CkMechanismType;

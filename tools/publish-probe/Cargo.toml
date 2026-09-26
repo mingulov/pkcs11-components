@@ -1,0 +1,13 @@
+[package]
+name = "pkcs11-components-publish-probe"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/mingulov/pkcs11-components"
+description = "Staging-only publishing probe for pkcs11-components release automation"
+readme = "README.md"
+publish = ["staging"]
+include = ["src/**", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+
+[workspace]

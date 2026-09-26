@@ -1,0 +1,5 @@
+# Allow the ubuntu-26.04 hosted-runner label, which actionlint 1.7.12
+# does not yet recognize.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04

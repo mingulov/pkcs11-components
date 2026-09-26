@@ -7,6 +7,9 @@
 //! converted before being passed to native PKCS#11 functions. This crate
 //! requires `std` and does not load providers or manage PKCS#11 sessions.
 
+#[cfg(kani)]
+mod proofs;
+
 pub mod attribute;
 pub mod error;
 pub mod info;

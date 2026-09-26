@@ -159,12 +159,33 @@ pub fn narrow_info_field(wire: u64, dst_width: usize) -> u64 {
 ///   canonicalised before translation, this is width-independent and symmetric.
 /// - Otherwise the length is a byte count of `src_width`-wide elements and is
 ///   rescaled to `dst_width`-wide elements: `(len / src_width) * dst_width`.
-pub fn translate_ulong_len(src_len: u64, src_width: usize, dst_width: usize) -> u64 {
+/// - [`WidthError::UnsupportedWidth`] for widths other than 4 or 8.
+/// - [`WidthError::Overflow`] if the rescaled length does not fit `u64`.
+///   A length that rescales beyond `u64` is unrepresentable, so it is
+///   reported, never wrapped or saturated into the sentinel.
+///
+/// Canonicalize a native `ulValueLen` before translating it. In particular,
+/// a 32-bit unavailable length must become `u64::MAX` before rescaling:
+///
+/// ```
+/// use pkcs11_types::width::{canonicalize_ulong, translate_ulong_len};
+/// let unavailable = canonicalize_ulong(0xffff_ffff, 4);
+/// assert_eq!(translate_ulong_len(unavailable, 4, 8), Ok(0xffff_ffff_ffff_ffff));
+/// assert_eq!(translate_ulong_len(unavailable, 4, 4), Ok(0xffff_ffff));
+/// ```
+pub fn translate_ulong_len(
+    src_len: u64,
+    src_width: usize,
+    dst_width: usize,
+) -> Result<u64, WidthError> {
+    if !is_valid_width(src_width) || !is_valid_width(dst_width) {
+        return Err(WidthError::UnsupportedWidth);
+    }
     if src_len == CANONICAL_UNAVAILABLE {
-        return all_ones(dst_width);
+        return Ok(all_ones(dst_width));
     }
     let elements = src_len / src_width as u64;
-    elements * dst_width as u64
+    elements.checked_mul(dst_width as u64).ok_or(WidthError::Overflow)
 }
 
 #[cfg(test)]
@@ -253,26 +274,41 @@ mod tests {
 
     #[test]
     fn translate_len_scalar_both_directions() {
-        assert_eq!(translate_ulong_len(8, 8, 4), 4); // 64-bit backend ulong -> 32-bit client
-        assert_eq!(translate_ulong_len(4, 4, 8), 8); // 32-bit backend ulong -> 64-bit client
-        assert_eq!(translate_ulong_len(8, 8, 8), 8); // identity
-        assert_eq!(translate_ulong_len(4, 4, 4), 4);
+        assert_eq!(translate_ulong_len(8, 8, 4), Ok(4)); // 64-bit backend ulong -> 32-bit client
+        assert_eq!(translate_ulong_len(4, 4, 8), Ok(8)); // 32-bit backend ulong -> 64-bit client
+        assert_eq!(translate_ulong_len(8, 8, 8), Ok(8)); // identity
+        assert_eq!(translate_ulong_len(4, 4, 4), Ok(4));
     }
 
     #[test]
     fn translate_len_array_rescales_by_element_count() {
-        assert_eq!(translate_ulong_len(24, 8, 4), 12); // 3 elems: 3*8 -> 3*4
-        assert_eq!(translate_ulong_len(12, 4, 8), 24); // 3 elems: 3*4 -> 3*8
+        assert_eq!(translate_ulong_len(24, 8, 4), Ok(12)); // 3 elems: 3*8 -> 3*4
+        assert_eq!(translate_ulong_len(12, 4, 8), Ok(24)); // 3 elems: 3*4 -> 3*8
     }
 
     #[test]
     fn translate_len_maps_canonical_sentinel_to_native_both_directions() {
         // The wire sentinel is canonical (u64::MAX) regardless of backend width;
         // it maps to the destination-width all-ones in every direction.
-        assert_eq!(translate_ulong_len(CANONICAL_UNAVAILABLE, 8, 4), 0xFFFF_FFFF);
-        assert_eq!(translate_ulong_len(CANONICAL_UNAVAILABLE, 4, 8), u64::MAX);
-        assert_eq!(translate_ulong_len(CANONICAL_UNAVAILABLE, 8, 8), u64::MAX);
-        assert_eq!(translate_ulong_len(CANONICAL_UNAVAILABLE, 4, 4), 0xFFFF_FFFF);
+        assert_eq!(translate_ulong_len(CANONICAL_UNAVAILABLE, 8, 4), Ok(0xFFFF_FFFF));
+        assert_eq!(translate_ulong_len(CANONICAL_UNAVAILABLE, 4, 8), Ok(u64::MAX));
+        assert_eq!(translate_ulong_len(CANONICAL_UNAVAILABLE, 8, 8), Ok(u64::MAX));
+        assert_eq!(translate_ulong_len(CANONICAL_UNAVAILABLE, 4, 4), Ok(0xFFFF_FFFF));
+    }
+
+    #[test]
+    fn translate_len_reports_overflow_instead_of_wrapping() {
+        // 2^61 four-byte elements rescale to 2^64, which does not fit u64.
+        assert_eq!(translate_ulong_len(1 << 63, 4, 8), Err(WidthError::Overflow));
+        // Just below the boundary still succeeds.
+        assert_eq!(translate_ulong_len((1 << 63) - 4, 4, 8), Ok(u64::MAX - 7));
+    }
+
+    #[test]
+    fn translate_len_rejects_bad_width() {
+        assert_eq!(translate_ulong_len(8, 0, 8), Err(WidthError::UnsupportedWidth));
+        assert_eq!(translate_ulong_len(8, 2, 8), Err(WidthError::UnsupportedWidth));
+        assert_eq!(translate_ulong_len(8, 8, 3), Err(WidthError::UnsupportedWidth));
     }
 
     #[test]
@@ -323,15 +359,12 @@ mod tests {
 
 #[cfg(test)]
 mod law_tests {
-    //! Randomized law tests (dependency-free): a seeded xorshift PRNG
-    //! sweeps a few thousand cases per law, complementing the pinned
-    //! example matrix above. Failures print the seed value so a case is
-    //! reproducible by pasting it into a pinned test.
+    //! Seeded tests cover 4,096 cases per law (48 under Miri). Each test uses
+    //! a fixed seed to keep failures reproducible.
 
     use super::*;
 
-    /// Deterministic xorshift64* — good enough to sweep input space,
-    /// no dependency, identical on every arch/run.
+    /// Deterministic xorshift64* generator with no external dependency.
     struct Rng(u64);
 
     impl Rng {
@@ -345,8 +378,7 @@ mod law_tests {
         }
     }
 
-    // Miri interprets ~100x slower; a smaller sweep still exercises the
-    // laws' unsafe-free arithmetic paths there.
+    // Use fewer cases under Miri to keep interpreted test runs practical.
     const CASES: usize = if cfg!(miri) { 48 } else { 4096 };
 
     #[test]
@@ -380,8 +412,8 @@ mod law_tests {
 
     #[test]
     fn law_reencode_rejects_any_unrepresentable_element() {
-        // D4: one element above the destination range poisons the array —
-        // never truncation, regardless of position.
+        // Any element above the destination range causes Overflow,
+        // regardless of its position. No element is truncated.
         let mut rng = Rng(0xBAD0_0000_0000_0003);
         for _ in 0..CASES {
             let n = 1 + (rng.next() % 4) as usize;
@@ -411,7 +443,7 @@ mod law_tests {
             for (from, to) in [(4usize, 8usize), (8, 4), (4, 4), (8, 8)] {
                 assert_eq!(
                     translate_ulong_len(elements * from as u64, from, to),
-                    elements * to as u64
+                    Ok(elements * to as u64)
                 );
             }
         }

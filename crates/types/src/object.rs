@@ -66,28 +66,38 @@ impl CkKeyType {
     pub const ACTI: Self = Self(0x0000_0024);
     pub const CAMELLIA: Self = Self(0x0000_0025);
     pub const ARIA: Self = Self(0x0000_0026);
-    pub const SHA512_224: Self = Self(0x0000_0027);
-    pub const SHA512_256: Self = Self(0x0000_0028);
-    pub const SEED: Self = Self(0x0000_0029);
-    pub const GOSTR3410: Self = Self(0x0000_002A);
-    pub const GOSTR3411: Self = Self(0x0000_002B);
-    pub const GOST28147: Self = Self(0x0000_002C);
-    pub const CHACHA20: Self = Self(0x0000_002D);
-    pub const POLY1305: Self = Self(0x0000_002E);
-    pub const AES_XTS: Self = Self(0x0000_002F);
-    pub const SHA3_224: Self = Self(0x0000_0030);
-    pub const SHA3_256: Self = Self(0x0000_0031);
-    pub const SHA3_384: Self = Self(0x0000_0032);
-    pub const SHA3_512: Self = Self(0x0000_0033);
-    pub const BLAKE2B_160: Self = Self(0x0000_0034);
-    pub const BLAKE2B_256: Self = Self(0x0000_0035);
-    pub const BLAKE2B_384: Self = Self(0x0000_0036);
-    pub const BLAKE2B_512: Self = Self(0x0000_0037);
-    pub const SALSA20: Self = Self(0x0000_0038);
-    pub const X2RATCHET: Self = Self(0x0000_0039);
-    pub const EC_EDWARDS: Self = Self(0x0000_003A);
-    pub const EC_MONTGOMERY: Self = Self(0x0000_003B);
-    pub const HKDF: Self = Self(0x0000_003C);
+    /// `CKK_SHA512_224_HMAC`; the Rust name retains its historical shorthand.
+    pub const SHA512_224: Self = Self(0x0000_0043);
+    /// `CKK_SHA512_256_HMAC`; the Rust name retains its historical shorthand.
+    pub const SHA512_256: Self = Self(0x0000_0044);
+    pub const SEED: Self = Self(0x0000_002F);
+    pub const GOSTR3410: Self = Self(0x0000_0030);
+    pub const GOSTR3411: Self = Self(0x0000_0031);
+    pub const GOST28147: Self = Self(0x0000_0032);
+    pub const CHACHA20: Self = Self(0x0000_0033);
+    pub const POLY1305: Self = Self(0x0000_0034);
+    pub const AES_XTS: Self = Self(0x0000_0035);
+    /// `CKK_SHA3_224_HMAC`.
+    pub const SHA3_224: Self = Self(0x0000_0036);
+    /// `CKK_SHA3_256_HMAC`.
+    pub const SHA3_256: Self = Self(0x0000_0037);
+    /// `CKK_SHA3_384_HMAC`.
+    pub const SHA3_384: Self = Self(0x0000_0038);
+    /// `CKK_SHA3_512_HMAC`.
+    pub const SHA3_512: Self = Self(0x0000_0039);
+    /// `CKK_BLAKE2B_160_HMAC`.
+    pub const BLAKE2B_160: Self = Self(0x0000_003A);
+    /// `CKK_BLAKE2B_256_HMAC`.
+    pub const BLAKE2B_256: Self = Self(0x0000_003B);
+    /// `CKK_BLAKE2B_384_HMAC`.
+    pub const BLAKE2B_384: Self = Self(0x0000_003C);
+    /// `CKK_BLAKE2B_512_HMAC`.
+    pub const BLAKE2B_512: Self = Self(0x0000_003D);
+    pub const SALSA20: Self = Self(0x0000_003E);
+    pub const X2RATCHET: Self = Self(0x0000_003F);
+    pub const EC_EDWARDS: Self = Self(0x0000_0040);
+    pub const EC_MONTGOMERY: Self = Self(0x0000_0041);
+    pub const HKDF: Self = Self(0x0000_0042);
 
     pub const fn from_vendor(offset: u32) -> Self {
         Self(Self::VENDOR_DEFINED.0 | offset as u64)
