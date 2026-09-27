@@ -179,14 +179,14 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pkcs11-abi"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cryptoki-sys",
 ]
 
 [[package]]
 name = "pkcs11-module"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cryptoki-sys",
  "libloading 0.9.0",
@@ -195,7 +195,7 @@ dependencies = [
 
 [[package]]
 name = "pkcs11-types"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cryptoki-sys",
  "serde",

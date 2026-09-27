@@ -3,6 +3,17 @@
 The three crates are versioned together. Public constants, serialized forms,
 errors, layouts, selection results, and features are semver-significant.
 
+## [0.2.1] - 2026-09-27
+
+Dependency maintenance release. No public API changes, no migration
+required, and no change to the proposed external-mu additions.
+
+### Changed
+
+- `pkcs11-module`: `libloading` 0.8 to 0.9 for provider acquisition.
+- `pkcs11-types`: `toml` 0.8 to 1.1 for mechanism registry configuration.
+- `pkcs11-types`: `zeroize` 1.8.2 to 1.9.0.
+
 ## [0.2.0] - 2026-09-26
 
 First crates.io release candidate.
