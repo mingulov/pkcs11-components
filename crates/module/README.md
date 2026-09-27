@@ -9,7 +9,7 @@ reexports the layout APIs from `pkcs11-abi`. It is part of the
 ```toml
 [dependencies]
 pkcs11-module = "0.2"
-libloading = "0.8" # needed when your code opens provider libraries
+libloading = "0.9" # needed when your code opens provider libraries
 ```
 
 ```rust,no_run
