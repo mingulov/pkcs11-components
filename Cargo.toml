@@ -12,7 +12,7 @@ repository = "https://github.com/mingulov/pkcs11-components"
 [workspace.dependencies]
 pkcs11-abi = { path = "crates/abi", version = "0.2.0", default-features = false }
 cryptoki-sys = "0.5"
-libloading = "0.8"
+libloading = "0.9"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 tracing = "0.1"
