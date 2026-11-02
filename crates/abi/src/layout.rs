@@ -371,8 +371,15 @@ mod tests {
             select(Provenance::LegacyFunctionList, Version { major: 2, minor: 40 }),
             Selection::Exact(68)
         );
+        for minor in [0, 1, 2] {
+            assert_eq!(
+                select(Provenance::LegacyFunctionList, Version { major: 3, minor }),
+                Selection::Exact(68),
+                "a legacy list stamped with published 3.{minor} is the frozen 68-slot layout"
+            );
+        }
         assert_eq!(
-            select(Provenance::LegacyFunctionList, Version { major: 3, minor: 2 }),
+            select(Provenance::LegacyFunctionList, Version { major: 3, minor: 3 }),
             Selection::KnownPrefix(68)
         );
         assert_eq!(

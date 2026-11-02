@@ -288,8 +288,8 @@ mod tests {
         for version in [
             cryptoki_sys::CK_VERSION { major: 2, minor: 2 },
             cryptoki_sys::CK_VERSION { major: 2, minor: 41 },
-            cryptoki_sys::CK_VERSION { major: 3, minor: 0 },
-            cryptoki_sys::CK_VERSION { major: 3, minor: 2 },
+            cryptoki_sys::CK_VERSION { major: 3, minor: 3 },
+            cryptoki_sys::CK_VERSION { major: 3, minor: 255 },
         ] {
             let set = tables_for(Surface::LegacyFunctionList { version });
             assert!(matches!(set, TableSet::WalkKnownPrefix(_)), "{version:?}");
@@ -310,13 +310,15 @@ mod tests {
     }
 
     #[test]
-    fn legacy_misstamped_3x_walks_only_the_known_base_prefix() {
-        let set = tables_for(Surface::LegacyFunctionList {
-            version: cryptoki_sys::CK_VERSION { major: 3, minor: 2 },
-        });
-        assert!(matches!(set, TableSet::WalkKnownPrefix(_)));
-        assert_eq!(walked(set), vec![FUNCTION_LIST_FIELDS.as_ptr()]);
-        assert_eq!(field_count(set), 68);
+    fn legacy_30_through_32_walk_the_exact_base() {
+        for minor in [0, 1, 2] {
+            let set = tables_for(Surface::LegacyFunctionList {
+                version: cryptoki_sys::CK_VERSION { major: 3, minor },
+            });
+            assert!(matches!(set, TableSet::Walk(_)), "3.{minor} must be exact");
+            assert_eq!(walked(set), vec![FUNCTION_LIST_FIELDS.as_ptr()], "3.{minor}");
+            assert_eq!(field_count(set), 68, "3.{minor}");
+        }
     }
 
     #[test]
