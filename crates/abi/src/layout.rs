@@ -264,6 +264,11 @@ pub const fn select(provenance: Provenance, version: Version) -> Selection {
         Provenance::LegacyFunctionList => match (version.major, version.minor) {
             (2, 0) => Selection::Exact(67),
             (2, 1 | 10 | 11 | 20 | 30 | 40) => Selection::Exact(68),
+            // OASIS PKCS#11 v3.2 keeps CK_FUNCTION_LIST at the 68-slot
+            // 2.40 layout (it ends at C_WaitForSlotEvent); longer tables
+            // arrive only via C_GetInterfaceList/C_GetInterface. A legacy
+            // list stamped with a published 3.x is exactly those 68 slots.
+            (3, 0..=2) => Selection::Exact(68),
             (2, _) | (3, _) => Selection::KnownPrefix(68),
             _ => Selection::Refuse,
         },
