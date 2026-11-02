@@ -3,6 +3,25 @@
 The three crates are versioned together. Public constants, serialized forms,
 errors, layouts, selection results, and features are semver-significant.
 
+## [0.2.3] - 2026-11-02
+
+Bug-fix release. `select()` now walks the exact 68-slot legacy layout for
+function lists stamped with a published PKCS#11 3.x version (3.0 through
+3.2). No migration required, and no change to the proposed external-mu
+additions.
+
+### Fixed
+
+- `pkcs11-abi`: a legacy `CK_FUNCTION_LIST` stamped 3.0, 3.1 or 3.2 (for
+  example SoftHSM 2.7, which reports PKCS#11 3.2) selects
+  `Selection::Exact(68)` instead of `Selection::KnownPrefix(68)`. OASIS
+  PKCS#11 3.0, 3.1 and 3.2 (§3.6 in each) freeze the legacy list at the
+  2.40 layout ending at `C_WaitForSlotEvent`: the version "must be set to
+  0x02 and 0x28" and modules "must not add new functions at the end".
+  New functions arrive only in `CK_FUNCTION_LIST_3_0`/`_3_2`, obtained
+  through `C_GetInterfaceList`/`C_GetInterface`. Selection for 2.x stamps
+  and for 3.x stamps outside 3.0-3.2 is unchanged.
+
 ## [0.2.2] - 2026-11-02
 
 Dependency maintenance release. No public API changes, no migration
