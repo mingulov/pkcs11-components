@@ -3,6 +3,21 @@
 The three crates are versioned together. Public constants, serialized forms,
 errors, layouts, selection results, and features are semver-significant.
 
+## [0.3.0] - 2026-11-02
+
+Dependency maintenance release. No public API changes, no migration
+required, and no change to the proposed external-mu additions.
+
+### Changed
+
+- `pkcs11-types`: `toml` 1.1.6 to 1.1.8 for mechanism registry configuration.
+- `pkcs11-types`: `zeroize` 1.9.0 to 1.9.1.
+- Lockfile refreshed to the latest semver-compatible transitive
+  dependencies.
+- CI/release workflows: `actions/upload-artifact` 7.0.1 to 7.0.2,
+  `rust-lang/crates-io-auth-action` 1.0.5 to 1.0.6, and the pinned
+  `dtolnay/rust-toolchain` revision updated.
+
 ## [0.2.1] - 2026-09-27
 
 Dependency maintenance release. No public API changes, no migration
