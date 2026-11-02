@@ -28,9 +28,9 @@ The first crates.io release is being prepared. After publication, add:
 
 ```toml
 [dependencies]
-pkcs11-abi = "0.2"
-pkcs11-module = "0.2"
-pkcs11-types = "0.2"
+pkcs11-abi = "0.3"
+pkcs11-module = "0.3"
+pkcs11-types = "0.3"
 libloading = "0.9" # needed when your code opens provider libraries
 ```
 

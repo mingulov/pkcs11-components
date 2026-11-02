@@ -7,7 +7,7 @@ selection and bounds-checked readers. It is part of
 
 ```toml
 [dependencies]
-pkcs11-abi = "0.2"
+pkcs11-abi = "0.3"
 ```
 
 ```rust
@@ -33,7 +33,7 @@ target-layout facts and slice readers:
 
 ```toml
 [dependencies]
-pkcs11-abi = { version = "0.2", default-features = false }
+pkcs11-abi = { version = "0.3", default-features = false }
 ```
 
 See the [workspace README](https://github.com/mingulov/pkcs11-components)
