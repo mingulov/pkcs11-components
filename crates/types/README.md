@@ -11,7 +11,7 @@ and requires `std`.
 
 ```toml
 [dependencies]
-pkcs11-types = "0.3"
+pkcs11-types = "0.2"
 ```
 
 ```rust

@@ -3,7 +3,7 @@
 The three crates are versioned together. Public constants, serialized forms,
 errors, layouts, selection results, and features are semver-significant.
 
-## [0.3.0] - 2026-11-02
+## [0.2.2] - 2026-11-02
 
 Dependency maintenance release. No public API changes, no migration
 required, and no change to the proposed external-mu additions.
