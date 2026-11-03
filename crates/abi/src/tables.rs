@@ -123,8 +123,9 @@ impl TableSpan {
 pub enum TableSet {
     Walk(&'static [TableSpan]),
     /// Only the listed prefix is supported by the asserted surface/version.
-    /// This includes legacy 3.x, unknown 2.x minors, and standard interfaces
-    /// newer than 3.2. Do not infer or walk fields beyond this prefix.
+    /// This includes legacy 3.x versions newer than 3.2, unknown 2.x minors,
+    /// and standard interfaces newer than 3.2. Do not infer or walk fields
+    /// beyond this prefix.
     WalkKnownPrefix(&'static [TableSpan]),
     /// Unknown major/layout: record, walk nothing.
     Refuse,
