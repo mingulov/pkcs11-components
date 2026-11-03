@@ -99,8 +99,9 @@ fn ordinal_reads_respect_the_snapshot_prefix() {
 
 /// Selection is total and bounded: every version/provenance combination maps
 /// to a decision whose field count never exceeds the 104-field catalog, and
-/// the provenance policy holds (legacy 3.x degrades to a 68-field prefix,
-/// unknown majors refuse).
+/// the provenance policy holds (legacy 3.0-3.2 selects the exact 68-field
+/// base, later legacy 3.x degrades to a 68-field prefix, unknown majors
+/// refuse).
 #[kani::proof]
 fn selection_is_total_and_bounded() {
     let provenance =
@@ -119,10 +120,17 @@ fn selection_is_total_and_bounded() {
 
     match provenance {
         Provenance::LegacyFunctionList => match version.major {
-            3 => kani::assert(
-                crate::layout::select(provenance, version) == Selection::KnownPrefix(68),
-                "legacy 3.x degrades to the base prefix",
-            ),
+            3 => {
+                let expected = if version.minor <= 2 {
+                    Selection::Exact(68)
+                } else {
+                    Selection::KnownPrefix(68)
+                };
+                kani::assert(
+                    crate::layout::select(provenance, version) == expected,
+                    "legacy 3.x: 3.0-3.2 exact, later KnownPrefix",
+                );
+            }
             2 => {
                 let known_minor = matches!(version.minor, 0 | 1 | 10 | 11 | 20 | 30 | 40);
                 match crate::layout::select(provenance, version) {

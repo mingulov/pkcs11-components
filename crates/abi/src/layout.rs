@@ -267,7 +267,7 @@ pub const fn select(provenance: Provenance, version: Version) -> Selection {
             // OASIS PKCS#11 v3.2 keeps CK_FUNCTION_LIST at the 68-slot
             // 2.40 layout (it ends at C_WaitForSlotEvent); longer tables
             // arrive only via C_GetInterfaceList/C_GetInterface. A legacy
-            // list stamped with a published 3.x is exactly those 68 slots.
+            // list stamped 3.0 through 3.2 is exactly those 68 slots.
             (3, 0..=2) => Selection::Exact(68),
             (2, _) | (3, _) => Selection::KnownPrefix(68),
             _ => Selection::Refuse,
